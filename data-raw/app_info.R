@@ -28,7 +28,7 @@ info <- info %>%
       abnorm,
       "Calcificación" = "CALC",
       "Masas bien definidas o circunscritas" = "CIRC",
-      "Masa espigad" = "SPIC",
+      "Masa espigada" = "SPIC",
       "Otras masas o mal definidas" = "MISC",
       "Distorsión estructural" = "ARCH",
       "Asimetría" = "ASYM",
