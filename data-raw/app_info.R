@@ -39,9 +39,6 @@ info <- info %>%
       "Benigno" = "B",
       "Maligno" = "M"
     )
-  ) %>%
-  mutate(
-    severity = fct_explicit_na(severity, na_level = "N/A")
   )
 
 # Almacenar el resultado en un archivo RData para su uso dentro de la aplicacion
