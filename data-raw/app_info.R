@@ -1,5 +1,5 @@
 # Extraer la información detallada de cada mamografía
-pacman::p_load(fs, readr, dplyr, tidyr, forcats)
+pacman::p_load(fs, readr, dplyr, tidyr, furrr, purrr, forcats, stringr, pixmap, png)
 
 # Leer el archivo info.txt con la información detallada de cada mamografía
 info <- path("extdata/all-mias/Info.txt") %>%
@@ -41,5 +41,30 @@ info <- info %>%
     )
   )
 
-# Almacenar el resultado en un archivo RData para su uso dentro de la aplicacion
+# Almacenar el resultado en un archivo RData para su uso dentro de la aplicación
 save(info, file = path("app/info.RData"))
+
+# Función para convertir las imágenes en formato PGM a formato PNG para poder visualizarlas dentro de la aplicación
+pnm_to_png <- function(filename, new_filename) {
+  # Leer la imagen en formato PGM
+  img <- read.pnm(filename)
+  # Almacenar la imagen en formato PNG manteniendo sus dimensiones originales
+  png(new_filename, width = img@size[1], height = img@size[2])
+  plot(img)
+  dev.off()
+}
+
+# Crear un nuevo directorio para almacenar las imágenes en formato PNG dentro del directorio de la aplicación
+dir_create("app/img")
+
+# Obtener la ubicación de cada imagen en formato PGM
+img_paths <- dir_ls("extdata/all-mias/", glob = "*.pgm")
+
+# Crear una nueva ubicación para cada imagen en formato PNG
+new_img_paths <- path("app/img", str_extract(img_paths, pattern = "mdb[:digit:]{3}"), ext = "png")
+
+# Paralelizar la conversión de las imágenes para que el proceso termine más rápido
+plan(multisession, workers = 4)
+
+# Convertir las imágenes en formato PGM a formato PNG
+future_map2(img_paths, new_img_paths, ~ pnm_to_png(.x, .y))
