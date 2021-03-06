@@ -1,5 +1,5 @@
 # Extraer la información detallada de cada mamografía
-pacman::p_load(fs, readr, dplyr, tidyr, furrr, purrr, forcats, stringr, pixmap, png)
+pacman::p_load(fs, readr, dplyr, furrr, purrr, forcats, stringr, pixmap, png)
 
 # Leer el archivo info.txt con la información detallada de cada mamografía
 info <- path("extdata/all-mias/Info.txt") %>%
@@ -15,7 +15,7 @@ write_csv(info, file = path("extdata/all-mias/info.csv"))
 # Pre-procesar el resultado para poder usarlo dentro de la app de Shiny
 info <- info %>%
   # Convertir los caracteres en factores
-  mutate_if(is.character, as.factor) %>%
+  mutate(across(where(is.character), as.factor)) %>%
   # Re-codificar los factores
   mutate(
     bg_tissue = fct_recode(
