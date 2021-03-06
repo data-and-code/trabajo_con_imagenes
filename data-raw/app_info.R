@@ -61,7 +61,7 @@ dir_create("app/img")
 img_paths <- dir_ls("extdata/all-mias/", glob = "*.pgm")
 
 # Crear una nueva ubicación para cada imagen en formato PNG
-new_img_paths <- path("app/img", str_extract(img_paths, pattern = "mdb[:digit:]{3}"), ext = "png")
+new_img_paths <- path("app/img", str_extract(img_paths, pattern = "(?<=mdb0{0,2})[1-9]{1}[:digit:]{0,2}"), ext = "png")
 
 # Paralelizar la conversión de las imágenes para que el proceso termine más rápido
 plan(multisession, workers = 4)
