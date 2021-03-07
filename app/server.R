@@ -1,6 +1,7 @@
 library(shinydashboard)
 library(shinyjs)
 library(DT)
+library(fs)
 library(dplyr)
 library(forcats)
 
@@ -43,7 +44,7 @@ function(input, output, session) {
       # Opciones definidas para la presentación de la tabla
       datatable(
         options = list(
-          dom = "tip",
+          dom = "ftip",
           rowGroup = list(dataSrc = 0),
           columnDefs = list(list(targets = 0, visible = FALSE)),
           pageLength = 6,
@@ -57,10 +58,48 @@ function(input, output, session) {
       )
   )
 
-  # Visualizar las imágenes
+  # Visualizar el título de la imagen seleccionada por el usuario
+  output$img_title <- renderText({
+    paste0("Imagen ", input$img_num)
+  })
+
+  # Visualizar la imagen seleccionada por el usuario
   output$image <- renderImage({
     list(
-      src = "../extdata/all-mias/mdb001.pgm"
+      src = path("img/", input$img_num, ext = "png"),
+      width = "80%",
+      alt = paste0("Imagen ", input$img_num),
+      style = "display: block; margin-left: auto; margin-right: auto"
     )
   }, deleteFile = FALSE)
+
+  # Filtrar la información de la imagen seleccionada por el usuario
+  selected_img <- reactive({
+    slice(info_per_image, input$img_num)
+  })
+
+  # Visualizar la información de la imagen seleccionada por el usuario
+  output$img_bg_tissue <- renderText({
+    selected_img()$bg_tissue
+  })
+
+  output$img_abnorm <- renderText({
+    selected_img()$abnorm
+  })
+
+  output$img_abnorm_details <- renderDataTable({
+    # Sólo se despliega la información de las anormalidades si la imagen contiene alguna
+    if (selected_img()$abnorm != "Normal") {
+      # Opciones definidas para la presentación de la tabla
+      datatable(
+        selected_img()$details[[1]],
+        options = list(dom = "t"),
+        rownames = FALSE,
+        container = abnorm_details_containers,
+        selection = "none"
+      )
+    } else {
+      NULL
+    }
+  })
 }

@@ -1,7 +1,6 @@
 library(shinydashboard)
 library(shinyjs)
 library(DT)
-library(stringr)
 
 header <- dashboardHeader(
   title = "Trabajo con imágenes",
@@ -9,7 +8,7 @@ header <- dashboardHeader(
 )
 
 sidebar <- dashboardSidebar(
-  # Menu con las pestañas
+  # Menú con las pestañas
   sidebarMenu(
     menuItem("Información de las mamografías", tabName = "info", icon = icon("table"))
   ),
@@ -19,14 +18,16 @@ sidebar <- dashboardSidebar(
 body <- dashboardBody(
   useShinyjs(),
   tabItems(
+    # Primera pestaña: Información detallada de cada imagen
     tabItem(
       tabName = "info",
+      # Tabla principal con la información detallada
       h2("Información detallada"),
       fluidRow(
         box(
           dataTableOutput("info_table"),
           width = 9,
-          height = 585
+          height = 620
         ),
         box(
           # Menú con los filtros para la tabla
@@ -44,20 +45,38 @@ body <- dashboardBody(
                        choices = c("Todos" = "", levels(info$severity))
           ),
           width = 3,
-          height = 585
+          height = 620
         )
       ),
-      h2("Visualización de las imágenes"),
+      # Visualización de cada imagen de forma individual
+      h2("Visualización de las mamografías"),
       fluidRow(
         box(
           div(
             # Selección de la imagen
-            sliderInput("menu", label = "Nombre del archivo",
+            sliderInput("img_num", label = "Número de imagen",
                         min = min(img_nums), max = max(img_nums), value = 1, step = 1,
                         pre = "Imagen "),
             style = "text-align: center;"
           ),
-          imageOutput("image"),
+          # Grid con la información de cada imagen y la visualización de la propia imagen
+          div(
+            div(
+              # Información de cada imagen
+              div(h4(strong("Información detallada:")), style = "text-align: center;"),
+              hr(),
+              h5(strong("Archivo: ")),
+              p(textOutput("img_title", inline = TRUE), style = "font-size: 16px; text-align: center;"),
+              h5(strong("Tipo de tejido: ")),
+              p(textOutput("img_bg_tissue", inline = TRUE), style = "font-size: 16px; text-align: center;"),
+              h5(strong("Tipo de anormalidad: ")),
+              p(textOutput("img_abnorm", inline = TRUE), style = "font-size: 16px; text-align: center;"),
+              dataTableOutput("img_abnorm_details")
+            ),
+            # Visualización de la imagen
+            imageOutput("image", height = "100%"),
+            style = "display: grid; grid-template-columns: 1fr 1fr; grid-gap: 20px;"
+          ),
           width = 12
         ),
       )
