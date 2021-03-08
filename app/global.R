@@ -19,7 +19,6 @@ info_per_image <- info %>%
 # Contenedor HTML con los encabezados de la tabla principal para su visualización en la aplicación
 info_col_containers <- withTags(
   table(
-    class = "cell-border stripe",
     thead(
       tr(
         th(rowspan = 2, "Archivo"),
@@ -41,7 +40,6 @@ info_col_containers <- withTags(
 # en cada imagen para su visualización en la aplicación
 abnorm_details_containers <- withTags(
   table(
-    class = "cell-border stripe",
     thead(
       tr(
         th(colspan = 4, "Detalles de las anormalidades:")

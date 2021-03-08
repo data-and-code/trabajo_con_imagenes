@@ -18,11 +18,11 @@ sidebar <- dashboardSidebar(
 body <- dashboardBody(
   useShinyjs(),
   tabItems(
-    # Primera pestaña: Información detallada de cada imagen
+    # Primera pestaña: Información detallada de las imágenes
     tabItem(
       tabName = "info",
       # Tabla principal con la información detallada
-      h2("Información detallada"),
+      h2("Información de todas las mamografías"),
       fluidRow(
         box(
           dataTableOutput("info_table"),
@@ -49,7 +49,7 @@ body <- dashboardBody(
         )
       ),
       # Visualización de cada imagen de forma individual
-      h2("Visualización de las mamografías"),
+      h2("Información por mamografía"),
       fluidRow(
         box(
           div(
@@ -63,9 +63,9 @@ body <- dashboardBody(
           div(
             div(
               # Información de cada imagen
-              div(h4(strong("Información detallada:")), style = "text-align: center;"),
+              div(h4(strong("Detalles:")), style = "text-align: center;"),
               hr(),
-              h5(strong("Archivo: ")),
+              h5(strong("Imagen: ")),
               p(textOutput("img_title", inline = TRUE), style = "font-size: 16px; text-align: center;"),
               h5(strong("Tipo de tejido: ")),
               p(textOutput("img_bg_tissue", inline = TRUE), style = "font-size: 16px; text-align: center;"),

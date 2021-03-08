@@ -37,7 +37,7 @@ function(input, output, session) {
       # Seleccionar las columnas adecuadas de la tabla
       select(ref:approx_radius) %>%
       # Obtener del nombre del archivo el número de cada imagen, y modificar su presentación
-      mutate(across(ref, ~ paste0("Imagen ", as.numeric(str_extract(ref, "[:digit:]{3}"))))) %>%
+      mutate(across(ref, ~ paste0("Imagen: ", ref, ".pgm"))) %>%
       # Modificar los valores vacíos de las columnas para hacer evidente los NA's visualmente
       mutate(across(where(is.factor), fct_explicit_na, na_level = "<i>N/A</i>")) %>%
       mutate(across(where(is.numeric), ~ if_else(is.na(.x), "<i>N/A</i>", as.character(.x)))) %>%
@@ -58,11 +58,6 @@ function(input, output, session) {
       )
   )
 
-  # Visualizar el título de la imagen seleccionada por el usuario
-  output$img_title <- renderText({
-    paste0("Imagen ", input$img_num)
-  })
-
   # Visualizar la imagen seleccionada por el usuario
   output$image <- renderImage({
     list(
@@ -79,6 +74,11 @@ function(input, output, session) {
   })
 
   # Visualizar la información de la imagen seleccionada por el usuario
+  # Visualizar el título de la imagen seleccionada por el usuario
+  output$img_title <- renderText({
+    paste0(selected_img()$ref, ".pgm")
+  })
+
   output$img_bg_tissue <- renderText({
     selected_img()$bg_tissue
   })
