@@ -307,3 +307,87 @@ plt.show()
 
 ![RE](img/tarea_2_4.png)
 
+Aún después de aplicar esta operación, y como se visualiza en la imagen de ejemplo, aún quedan elementos que no corresponden al área del busto. Sin embargo, claramente se puede notar que su tamaño es menor en comparación al área del busto.
+
+Por ello, para eliminar los elementos faltantes, los autores proponen usar las características del objeto busto en la imagen mamográfica para etiquetar los objetos, y después extraer el objeto de mayor tamaño de la imagen binarizada. Y aquellos objetos que no correspondan al área del busto se modifican para volverse parte del fondo en dicha imagen. Finalmente, estos objetos también se modifican en la imagen reducida $I$, estableciendo sus valores de intensidad igual al nivel de gris medio del área que no pertenece al área del busto en $I$.
+
+Sin embargo, los autores no explican cómo llevaron a cabo este proceso. Por lo que nosotros implementamos un proceso que busca replicar los puntos que ellos mencionan.
+
+Este proceso se compone de los siguientes pasos, aplicados a cada mamografía:
+
+1. Obtener los contornos de los objetos en la imagen binarizada ya modificada por el procesamiento morfológico de apertura.
+3. Tomar el contorno del objeto más grande, que corresponde a la región del busto.
+4. Crear una nueva imagen binarizada pintando solamente la región del objeto más grande.
+5. Limpiar la mamografía, estableciendo las intensidades de los objetos que no son parte de la región del busto igual al nivel de gris medio del área que no pertenece al busto, obteniendo dicho valor a partir de la fórmula del umbral T.
+
+```{r}
+# Obtener el contorno del objeto más grande en la imagen binarizada procesada
+def get_max_contour(img_mpo):
+    _, contours, _ = cv.findContours(img_mpo, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    # Se obtiene el contorno del objeto más grande
+    return [max(enumerate(contours), key = lambda tup: len(tup[1]))[1]]
+
+"""Obtener los objetos que no son la región del busto en la
+imagen binarizada original"""
+def get_non_breast_obj(img_bin):
+    _, contours, _ = cv.findContours(img_bin, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    # Se obtiene el índice del contorno del objeto más grande
+    ind_max_contour = max(enumerate(contours), key = lambda tup: len(tup[1]))[0]
+    # Se elimina el índice del objeto más grande
+    del contours[ind_max_contour]
+    # Obtener las regiones de estos objetos
+    new_img_bin = np.zeros(img_bin.shape).astype(img_bin.dtype)
+    cv.fillPoly(new_img_bin, contours, 1)
+    return new_img_bin
+
+"""Obtener dos nuevas imágenes binarizadas destacando en ambos casos solamente
+el objeto de mayor tamaño (la región del busto)"""
+def clean_img_mpo(img_mpo):
+    new_img_bin = np.zeros(img_mpo.shape).astype(img_mpo.dtype)
+    new_inv_img_bin = np.ones(img_mpo.shape).astype(img_mpo.dtype)
+    max_contour = get_max_contour(img_mpo)
+    # Obtener la nueva imagen binarizada y su inversa
+    cv.fillPoly(new_img_bin, max_contour, 255)
+    cv.fillPoly(new_inv_img_bin, max_contour, 0)
+    return new_img_bin, new_inv_img_bin
+
+# Obtener una nueva mamografía eliminando los objetos que no son parte de la región del busto
+def get_breast_region(img_scale, img_bin, img_mpo):
+    # Limpiar la imagen binarizada preprocesada
+    new_img_bin, new_inv_img_bin = clean_img_mpo(img_mpo)
+    # Obtener las intensidades del área que no pertenece a la región del busto
+    non_breasts_obj = img_scale * new_inv_img_bin
+    # Calcular el valor de gris medio de estas áreas usando la fórmula del umbral T
+    mean_gray_level = T(non_breasts_obj)
+    # Modificar las intensidades de estas regiones con este valor
+    img_mean_gray_level = mean_gray_level * get_non_breast_obj(img_bin)
+    new_img_scale = np.where(img_mean_gray_level == 0, img_scale, img_mean_gray_level)
+    return new_img_scale, new_img_bin
+```
+
+```{r}
+# Eliminar los objetos que no son parte de la región del busto en las imágenes escaladas
+clean_imgs = list()
+clean_imgs_bin = list()
+
+for img_scale, img_bin, img_mpo in zip(imgs_scale, imgs_bin, imgs_mpo):
+    clean_img, clean_img_bin = get_breast_region(img_scale, img_bin, img_mpo)
+    clean_imgs.append(clean_img)
+    clean_imgs_bin.append(clean_img_bin)
+```
+
+```{r}
+# Imagen de ejemplo (Imagen escalada limpia)
+plt.imshow(clean_imgs[13], cmap='gray')
+plt.show()
+```
+
+![RE](img/tarea_2_4_1.png)
+
+```{r}
+# Imagen de ejemplo (Imagen binarizada limpia)
+plt.imshow(clean_imgs_bin[13], cmap='gray')
+plt.show()
+```
+
+![RE](img/tarea_2_4_2.png)
