@@ -12,9 +12,7 @@ output:
       in_header: header.html
       after_body: footer.html
 ---
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, eval=FALSE)
-```
+
 
 ***
 
@@ -28,7 +26,8 @@ El objetivo es crear una aplicación donde se muestre como salida la informació
 
 Extraemos la informacion detallada de cada mamografía del archivo info.txt, posteriormente realizar correccione sobre este para permitir su uso dentro de la app. Al terminar lo almacenamos en un .csv para usarlo más adelante en el proyecto.
 
-```{r}
+
+```r
 # Extraer la información detallada de cada mamografía
 pacman::p_load(fs, readr, dplyr, furrr, purrr, forcats, stringr, pixmap, png)
 
@@ -48,7 +47,8 @@ write_csv(info, file = path("extdata/all-mias/info.csv"))
 
 Los caracteres son convertidos en factores para ser re-codificados y nos permitan mostrarlos adecuadamente en la app.
 
-```{r}
+
+```r
 # Pre-procesar el resultado para poder usarlo dentro de la app de Shiny
 info <- info %>%
   # Convertir los caracteres en factores
@@ -86,7 +86,8 @@ save(info, file = path("app/info.RData"))
 
 Finalmente realizamos la convesión de las imagenes de su formato original (PGM) a uno que pueda ser visualizado dentro de nuestra app (PNG).
 
-```{r}
+
+```r
 # Función para convertir las imágenes en formato PGM a formato PNG para poder visualizarlas dentro de la aplicación
 pnm_to_png <- function(filename, new_filename) {
   # Leer la imagen en formato PGM
@@ -136,7 +137,8 @@ Presenta la información disponible de una manera detallada sobre cada imagen de
 
 El objetivo es replicar un proceso de limpieza del fondo de la imagen
 
-```{python}
+
+```python
 # Bibliotecas a usar
 import os
 import re
@@ -187,7 +189,8 @@ Este proceso sigue la primera ramificación del algoritmo propuesto por los auto
 
 Primero, se importan al entorno todas las imágenes originales.
 
-```{python}
+
+```python
 # Ruta de las imágenes originales
 base_dir = '../extdata/all-mias/'
 all_filenames = os.listdir(base_dir)
@@ -214,7 +217,8 @@ Siguiendo el diagrama de flujo propuesto, el primer paso es reescalar la imagen 
 
 Para mantener la calidad de la extrapolación, los autores sugieren reescalar las imágenes originales de 1024 x 1024 pixeles a 256 x 256 pixeles.
 
-```{python}
+
+```python
 # Reescalar las imágenes para hacerlas más pequeñas (scale down)
 imgs_scale = list(map(lambda img_orig: cv.resize(img_orig, (256, 256)), imgs_orig))
 
@@ -229,7 +233,8 @@ plt.show()
 
 Los autores sugieren aplicar un filtro de mediana de 3 x 3 pixeles para reducir el ruido de la imagen.
 
-```{python}
+
+```python
 # Aplicar un filtro de mediana a cada una de las imágenes
 imgs_filter = list(map(lambda img_scale: cv.medianBlur(img_scale, 3), imgs_scale))
 
@@ -263,7 +268,8 @@ donde $I(x, y)$ es el valor de intensidad de cada pixel en la imagen.
 
 De esta forma, la imagen quedará divida en la región de fondo (con valor de pixel 0) y la región de objetos (con valor de pixel 1).
 
-```{python}
+
+```python
 # Obtener del umbral a partir del valor del nivel de gris en la imagen
 def T(img):
     H_n = np.histogram(img, bins=256, range=(0, 256))[0]
@@ -301,7 +307,8 @@ Para ello, la función toma un kernel que se desliza por la imagen, y modfica el
 
 Los autores proponen usar un elemento estructurado (kernel) formado por un disco de radio 2 pixeles.
 
-```{python}
+
+```python
 # Creación del kernel compuesto por un disco de radio 2
 kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (5, 5))
 kernel
@@ -313,7 +320,8 @@ kernel
 |        [1, 1, 1, 1, 1],
 |        [0, 0, 1, 0, 0]], dtype=uint8)
        
-```{python}
+
+```python
 # Aplicar el procesamiento morfológico de apertura sobre las imágenes binarizadas
 imgs_mpo = list(map(lambda img_bin: cv.morphologyEx(img_bin, cv.MORPH_OPEN, kernel), imgs_bin))
 
@@ -337,7 +345,8 @@ Este proceso se compone de los siguientes pasos, aplicados a cada mamografía:
 4. Crear una nueva imagen binarizada pintando solamente la región del objeto más grande.
 5. Limpiar la mamografía, estableciendo las intensidades de los objetos que no son parte de la región del busto con el valor del nivel de gris medio del área que no pertenece al busto.
 
-```{python}
+
+```python
 # Obtener el contorno del objeto más grande en la imagen binarizada procesada
 def get_max_contour(img_mpo):
     _, contours, _ = cv.findContours(img_mpo, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
@@ -382,7 +391,8 @@ def get_breast_region(img_scale, img_bin, img_mpo):
     return new_img_scale, new_img_bin
 ```
 
-```{python}
+
+```python
 # Eliminar los objetos que no son parte de la región del busto en las imágenes escaladas
 clean_imgs = list()
 clean_imgs_bin = list()
@@ -393,7 +403,8 @@ for img_scale, img_bin, img_mpo in zip(imgs_scale, imgs_bin, imgs_mpo):
     clean_imgs_bin.append(clean_img_bin)
 ```
 
-```{python}
+
+```python
 # Imagen de ejemplo (Imagen escalada limpia)
 plt.imshow(clean_imgs[13], cmap='gray')
 plt.show()
@@ -401,7 +412,8 @@ plt.show()
 
 ![RE](img/tarea_2_4_1.png)
 
-```{python}
+
+```python
 # Imagen de ejemplo (Imagen binarizada limpia)
 plt.imshow(clean_imgs_bin[13], cmap='gray')
 plt.show()
@@ -411,7 +423,8 @@ plt.show()
 
 Finalmente, todas las imágenes limpias se almacenan en el directorio de la aplicación para que puedan usarse dentro de ella.
 
-```{python}
+
+```python
 # Almacenar las mamografías limpias en la carpeta de la aplicación
 app_dir = '../app/img/'
 # Obtener los números de imagen en el orden en el que se importaron al entorno
