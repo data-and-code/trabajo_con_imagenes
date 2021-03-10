@@ -56,7 +56,7 @@ body <- dashboardBody(
             # Selección de la imagen
             sliderInput("img_num", label = "Número de imagen",
                         min = min(img_nums), max = max(img_nums), value = 1, step = 1,
-                        pre = "Imagen "),
+                        animate = animationOptions(interval = 2000), pre = "Imagen "),
             style = "text-align: center;"
           ),
           # Grid con la información de cada imagen y la visualización de la propia imagen
