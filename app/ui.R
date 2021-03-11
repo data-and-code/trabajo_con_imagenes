@@ -25,9 +25,8 @@ body <- dashboardBody(
       h2("Información de todas las mamografías"),
       fluidRow(
         box(
-          dataTableOutput("info_table"),
-          width = 9,
-          height = 620
+          dataTableOutput("info_table", height = 620),
+          width = 9
         ),
         box(
           # Menú con los filtros para la tabla
@@ -44,8 +43,7 @@ body <- dashboardBody(
                        label = "Por diagnóstico",
                        choices = c("Todos" = "", levels(info$severity))
           ),
-          width = 3,
-          height = 620
+          width = 3
         )
       ),
       # Visualización de cada imagen de forma individual
