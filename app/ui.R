@@ -83,7 +83,7 @@ body <- dashboardBody(
     # Segunda pestaña: Limpieza del fondo de las imágenes
     tabItem(
       tabName = "clean_imgs",
-      h2("Información por mamografía"),
+      h2("Resultado de la limpieza replicando el artículo"),
       fluidRow(
         box(
           div(
@@ -105,12 +105,23 @@ body <- dashboardBody(
               p(textOutput("clean_img_bg_tissue", inline = TRUE), style = "font-size: 16px; text-align: center;"),
               h5(strong("Tipo de anormalidad: ")),
               p(textOutput("clean_img_abnorm", inline = TRUE), style = "font-size: 16px; text-align: center;"),
-              dataTableOutput("img_abnorm_details"),
-              style = "grid-column: 1 / span 1; grid-row: 1 / span 2"
+              dataTableOutput("clean_img_abnorm_details"),
+              style = "grid-row: 1 / span 2"
             ),
             # Visualización de las imágenes
-            imageOutput("original_image", height = "100%"),
-            imageOutput("clean_image", height = "100%"),
+            div(
+              div(h4(strong("Imagen original:")), style = "text-align: center;"),
+              imageOutput("orig_img", height = "100%")
+            ),
+            div(
+              div(h4(strong("Imagen limpia:")), style = "text-align: center;"),
+              imageOutput("clean_img", height = "100%"),
+            ),
+            div(
+              div(h4(strong("Imagen binarizada resultante:")), style = "text-align: center;"),
+              imageOutput("clean_img_bin", height = "100%"),
+              style = "grid-column: 2 / span 2"
+            ),
             style = "display: grid; grid-template: 1fr 1fr / 1fr 1fr 1fr ; grid-gap: 20px;"
           ),
           width = 12
