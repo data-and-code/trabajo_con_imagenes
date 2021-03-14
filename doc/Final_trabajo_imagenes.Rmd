@@ -119,7 +119,7 @@ future_map2(img_paths, new_img_paths, ~ pnm_to_png(.x, .y))
 
 La aplicación se encuentra divdida en 2 partes.
 
-
+https://fernandogp.shinyapps.io/trabajo_con_imagenes/
 
 ### Información de todas las mamografías
 

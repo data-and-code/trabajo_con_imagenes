@@ -10,7 +10,8 @@ header <- dashboardHeader(
 sidebar <- dashboardSidebar(
   # Menú con las pestañas
   sidebarMenu(
-    menuItem("Información de las mamografías", tabName = "info", icon = icon("table"))
+    menuItem("Información de las mamografías", tabName = "info", icon = icon("table")),
+    menuItem("Limpieza del fondo", tabName = "clean_imgs", icon = icon("image"))
   ),
   width = 250
 )
@@ -25,9 +26,8 @@ body <- dashboardBody(
       h2("Información de todas las mamografías"),
       fluidRow(
         box(
-          dataTableOutput("info_table"),
-          width = 9,
-          height = 620
+          dataTableOutput("info_table", height = 620),
+          width = 9
         ),
         box(
           # Menú con los filtros para la tabla
@@ -44,8 +44,7 @@ body <- dashboardBody(
                        label = "Por diagnóstico",
                        choices = c("Todos" = "", levels(info$severity))
           ),
-          width = 3,
-          height = 620
+          width = 3
         )
       ),
       # Visualización de cada imagen de forma individual
@@ -76,6 +75,54 @@ body <- dashboardBody(
             # Visualización de la imagen
             imageOutput("image", height = "100%"),
             style = "display: grid; grid-template-columns: 1fr 1fr; grid-gap: 20px;"
+          ),
+          width = 12
+        ),
+      )
+    ),
+    # Segunda pestaña: Limpieza del fondo de las imágenes
+    tabItem(
+      tabName = "clean_imgs",
+      h2("Resultado de la limpieza replicando el artículo"),
+      fluidRow(
+        box(
+          div(
+            # Selección de la imagen
+            sliderInput("clean_img_num", label = "Número de imagen",
+                        min = min(img_nums), max = max(img_nums), value = 1, step = 1,
+                        animate = animationOptions(interval = 2000), pre = "Imagen "),
+            style = "text-align: center;"
+          ),
+          # Grid con la información de cada imagen y la visualización de las imágenes limpias
+          div(
+            div(
+              # Información de cada imagen
+              div(h4(strong("Detalles:")), style = "text-align: center;"),
+              hr(),
+              h5(strong("Imagen: ")),
+              p(textOutput("clean_img_title", inline = TRUE), style = "font-size: 16px; text-align: center;"),
+              h5(strong("Tipo de tejido: ")),
+              p(textOutput("clean_img_bg_tissue", inline = TRUE), style = "font-size: 16px; text-align: center;"),
+              h5(strong("Tipo de anormalidad: ")),
+              p(textOutput("clean_img_abnorm", inline = TRUE), style = "font-size: 16px; text-align: center;"),
+              dataTableOutput("clean_img_abnorm_details"),
+              style = "grid-row: 1 / span 2"
+            ),
+            # Visualización de las imágenes
+            div(
+              div(h4(strong("Imagen original:")), style = "text-align: center;"),
+              imageOutput("orig_img", height = "100%")
+            ),
+            div(
+              div(h4(strong("Imagen limpia:")), style = "text-align: center;"),
+              imageOutput("clean_img", height = "100%"),
+            ),
+            div(
+              div(h4(strong("Imagen binarizada resultante:")), style = "text-align: center;"),
+              imageOutput("clean_img_bin", height = "100%"),
+              style = "grid-column: 2 / span 2"
+            ),
+            style = "display: grid; grid-template: 1fr 1fr / 1fr 1fr 1fr ; grid-gap: 20px;"
           ),
           width = 12
         ),
