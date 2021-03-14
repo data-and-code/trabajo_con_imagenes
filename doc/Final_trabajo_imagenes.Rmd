@@ -3,14 +3,16 @@ title: "Trabajo con imágenes"
 author: "Fernando Gomez Perera, Ricardo Vargas Kumul y Calvin Lopez Alvarez"
 date: "r Sys.Date()"
 output:
-  pdf_document:
-    highlight: kate
+  html_document:
+    df_print: paged
   rmdformats::readthedown:
     highlight: tango
-    cards: false
+    cards: no
     includes:
       in_header: header.html
       after_body: footer.html
+  pdf_document:
+    highlight: kate
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, eval=FALSE)
