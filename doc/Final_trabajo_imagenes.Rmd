@@ -147,6 +147,41 @@ import numpy as np
 import matplotlib.pyplot as plt
 ```
 
+Se definen algunas funciones auxiliares usadas en distintas partes del proceso.
+
+```{python}
+# Leer una imagen para importarla al entorno
+def read_img(img_path):
+    with open(img_path, 'r') as img:
+        img = cv.imread(img_path)
+        # Regresar la imagen en escala de grises
+        return cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
+# Obtener una imagen binarizada a partir de otra mostrando una región específica seleccionada
+def get_region(img, region=('bg', 'max', 'min')):
+    # Ejecutar un análisis de componentes conectadas para extraer los objetos de la imagen
+    num_labels, labels, stats, centroids = cv.connectedComponentsWithStats(img, connectivity=4, ltype=cv.CV_16U)
+    # Índices de todos los objetos encontrados
+    objects = np.arange(num_labels)
+    # Extraer el objeto más grande (con área mayor)
+    max_object = np.argmax(stats[1::, 4]) + 1
+    # Extraer la imagen binarizada elegida
+    if region == 'max':
+        return np.isin(labels, max_object).astype(np.uint8)
+    elif region == 'min':
+        # Extraer los objetos más pequeños
+        min_objects = np.ma.array(objects[1:], mask=False)
+        min_objects.mask[max_object - 1] = True
+        min_objects = min_objects.compressed()
+        return np.isin(labels, min_objects).astype(np.uint8)
+    elif region == 'bg':
+        # Extraer el fondo, incluyendo los objetos más pequeños
+        bg = np.ma.array(objects, mask=False)
+        bg.mask[max_object] = True
+        bg = bg.compressed()
+        return np.isin(labels, bg).astype(np.uint8)
+```
+
 ## Artículos a replicar
 
 Los artículos que usamos como referencia para desarrollar los proyectos son los siguientes:
@@ -157,7 +192,7 @@ Los artículos que usamos como referencia para desarrollar los proyectos son los
 
 ## Primera parte: Extrapolación de la región del busto
 
-Para llevarl a cabo, tomamos como referencia el primer artículo de *Liu et al*. [[1]](#ref) En este artículo, los autores proponen un esquema mejorado de una serpiente Flujo del Vector Gradiente o *Gradient Vector Flow (GVF) snake* para poder extrapolar toda la región del busto. Este esquema o algoritmo que ellos proponen es el siguiente:
+Para llevarlo a cabo, tomamos como referencia el primer artículo de *Liu et al*. [[1]](#ref) En este artículo, los autores proponen un esquema mejorado de una serpiente Flujo del Vector Gradiente o *Gradient Vector Flow (GVF) snake* para poder extrapolar toda la región del busto. Este esquema o algoritmo que ellos proponen es el siguiente:
 
 ![RE](img/gvf_scheme.jpg)
 
@@ -181,9 +216,9 @@ En este punto, ambos procesos se unen:
 6. Aplicar la deformación serpiente usando el *GVF* calculado sobre la extrapolación inicial del borde del busto.
 7. Obtener la extrapolación final del borde del busto.
 
-### Tarea 1
+## Tarea 1
 
-#### 2. Replica un proceso de limpieza del fondo de la imagen
+### 2. Replica un proceso de limpieza del fondo de la imagen
 
 Este proceso sigue la primera ramificación del algoritmo propuesto por los autores.
 
@@ -210,39 +245,44 @@ plt.show()
 
 ![RE](img/tarea_2_0.png)
 
-##### 2.1 Reescalar la imagen
+El artículo tiene varias partes que se contradicen entre sí. Al principio del artículo, los autores mencionan que **primero** se aplica el filtro de mediana sobre las mamografías originales y **después** el reescalamiento de las mamografías. Sin embargo, en el primer diagrama de flujo se puede notar que estos pasos están invertidos.
 
-Siguiendo el diagrama de flujo propuesto, el primer paso es reescalar la imagen para hacerla más pequeña. Esto permitirá ahorrar tiempo en la ejecución de los pasos.
+Hemos probado ambas formas, y llegamos a la conclusión que se obtienen mejores resultados si **primero** se aplica el filtro de mediana y **después** el reescalamiento de las imágenes. Así que estos pasos se llevan a cabo en ese orden.
 
-Para mantener la calidad de la extrapolación, los autores sugieren reescalar las imágenes originales de 1024 x 1024 pixeles a 256 x 256 pixeles.
-
-```{python}
-# Reescalar las imágenes para hacerlas más pequeñas (scale down)
-imgs_scale = list(map(lambda img_orig: cv.resize(img_orig, (256, 256)), imgs_orig))
-
-# Imagen de ejemplo
-plt.imshow(imgs_scale[13], cmap='gray')
-plt.show()
-```
-
-![RE](img/tarea_2_1.png)
-
-##### 2.2 Aplicar el filtro de mediana
+#### 2.1 Aplicar el filtro de mediana
 
 Los autores sugieren aplicar un filtro de mediana de 3 x 3 pixeles para reducir el ruido de la imagen.
 
 ```{python}
 # Aplicar un filtro de mediana a cada una de las imágenes
-imgs_filter = list(map(lambda img_scale: cv.medianBlur(img_scale, 3), imgs_scale))
+imgs_filter = list(map(lambda img_orig: cv.medianBlur(img_orig, 3), imgs_orig))
 
 # Imagen de ejemplo
-plt.imshow(imgs_filter[13], cmap='gray')
+plt.imshow(imgs_filter[10], cmap='gray')
+plt.show()
+```
+
+![RE](img/tarea_2_1.png)
+
+#### 2.2 Reescalar la imagen
+
+Las mamografías se reescalan para hacerlas más pequeñas. Esto permitirá ahorrar tiempo en la ejecución del resto del proceso.
+
+Para mantener la calidad de la extrapolación, los autores sugieren reescalar las imágenes originales de 1024 x 1024 pixeles a 256 x 256 pixeles.
+
+```{python}
+# Reescalar las imágenes para hacerlas más pequeñas (scale down)
+imgs_scale = list(map(lambda img_filter: cv.resize(img_filter, (256, 256)), imgs_filter))
+
+# Imagen de ejemplo
+plt.imshow(imgs_scale[10], cmap='gray')
 plt.show()
 ```
 
 ![RE](img/tarea_2_2.png)
 
-##### 2.3 Binarización de las imágenes
+
+#### 2.3 Binarización de las imágenes
 
 Este paso permite obtener un contorno aproximado. Para ello, los autores proponen obtener un umbrarl $T$, el cual será equivalente al valor medio de gris de la imagen.
 
@@ -268,7 +308,7 @@ De esta forma, la imagen quedará divida en la región de fondo (con valor de pi
 ```{python}
 # Obtener del umbral a partir del valor del nivel de gris en la imagen
 def T(img):
-    H_n = np.histogram(img, bins=256, range=(0, 256))[0]
+    H_n = cv.calcHist([img], [0], None, histSize=[256], ranges=(0, 256), accumulate=False).ravel()
     return 0.2 * np.sum(np.arange(0, 256) * H_n) / np.sum(H_n)
 
 # Binarizar la imagen
@@ -276,20 +316,20 @@ def binarization(img):
     return np.where(img >= T(img), 1, 0).astype(np.uint8)
 
 # Binarización de las imágenes
-imgs_bin = list(map(lambda img_filter: binarization(img_filter), imgs_filter))
+imgs_bin = list(map(lambda img_scale: binarization(img_scale), imgs_scale))
 
 # Imagen de ejemplo
-plt.imshow(imgs_bin[13], cmap='gray')
+plt.imshow(imgs_bin[10], cmap='gray')
 plt.show()
 ```
 
 ![RE](img/tarea_2_3.png)
 
-##### 2.4 Eliminar los objetos que no son parte de la región del busto.
+#### 2.4 Eliminar los objetos que no son parte de la región del busto.
 
 Este proceso está compuesto de 2 partes:
 
-###### 2.4.1 Procesamiento morfológico
+##### 2.4.1 Procesamiento morfológico
 
 Tomando como base el ejemplo de la imagen binarizada, se puede notar que además de la región del busto, hay pequeñas regiones que no son de interés. Para eliminarlos, los autores proponen en su algoritmo aplicar la operación morfológica de apertura, la cual está compuesta de 2 transformaciones morfológicas:
 
@@ -306,13 +346,14 @@ Los autores proponen usar un elemento estructurado (kernel) formado por un disco
 ```{python}
 # Creación del kernel compuesto por un disco de radio 2
 kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (5, 5))
+kernel[[1, 1, 3, 3], [0, 4, 0, 4]] = 0
 kernel
 ```
 
 | array([[0, 0, 1, 0, 0],
+|        [0, 1, 1, 1, 0],
 |        [1, 1, 1, 1, 1],
-|        [1, 1, 1, 1, 1],
-|        [1, 1, 1, 1, 1],
+|        [0, 1, 1, 1, 0],
 |        [0, 0, 1, 0, 0]], dtype=uint8)
        
 ```{python}
@@ -320,96 +361,72 @@ kernel
 imgs_mpo = list(map(lambda img_bin: cv.morphologyEx(img_bin, cv.MORPH_OPEN, kernel), imgs_bin))
 
 # Imagen de ejemplo
-plt.imshow(imgs_mpo[13], cmap='gray')
-plt.show()
-```
-
-![RE](img/tarea_2_4.png)
-
-Aún después de aplicar esta operación, y como se visualiza en la imagen de ejemplo, aún quedan elementos que no corresponden al área del busto. Sin embargo, claramente se puede notar que su tamaño es menor en comparación al área del busto.
-
-Por ello, para eliminar los elementos faltantes, los autores proponen usar las características del objeto busto en la imagen mamográfica para etiquetar los objetos, y después extraer el objeto de mayor tamaño de la imagen binarizada. Y aquellos objetos que no correspondan al área del busto se modifican para volverse parte del fondo en dicha imagen. Finalmente, estos objetos también se modifican en la imagen reducida $I$, estableciendo sus valores de intensidad igual al nivel de gris medio del área que no pertenece al área del busto en $I$.
-
-Sin embargo, los autores no explican cómo llevaron a cabo este proceso. Por lo que nosotros implementamos un proceso que busca replicar los puntos que ellos mencionan.
-
-Este proceso se compone de los siguientes pasos, aplicados a cada mamografía:
-
-1. Obtener los contornos de los objetos en la imagen binarizada ya modificada por el procesamiento morfológico de apertura.
-3. Tomar el contorno del objeto más grande, que corresponde a la región del busto.
-4. Crear una nueva imagen binarizada pintando solamente la región del objeto más grande.
-5. Limpiar la mamografía, estableciendo las intensidades de los objetos que no son parte de la región del busto con el valor del nivel de gris medio del área que no pertenece al busto.
-
-```{python}
-# Obtener el contorno del objeto más grande en la imagen binarizada procesada
-def get_max_contour(img_mpo):
-    _, contours, _ = cv.findContours(img_mpo, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    # Se obtiene el contorno del objeto más grande
-    return [max(enumerate(contours), key = lambda tup: len(tup[1]))[1]]
-
-"""Obtener los objetos que no son la región del busto en la
-imagen binarizada original"""
-def get_non_breast_objs(img_bin):
-    _, contours, _ = cv.findContours(img_bin, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    # Se obtiene el índice del contorno del objeto más grande
-    ind_max_contour = max(enumerate(contours), key = lambda tup: len(tup[1]))[0]
-    # Se elimina el índice del objeto más grande
-    del contours[ind_max_contour]
-    # Obtener las regiones de estos objetos
-    new_img_bin = np.zeros(img_bin.shape).astype(img_bin.dtype)
-    cv.fillPoly(new_img_bin, contours, 1)
-    return new_img_bin
-
-"""Obtener dos nuevas imágenes binarizadas destacando en ambos casos solamente
-el objeto de mayor tamaño (la región del busto)"""
-def clean_img_mpo(img_mpo):
-    new_img_bin = np.zeros(img_mpo.shape).astype(img_mpo.dtype)
-    new_inv_img_bin = np.ones(img_mpo.shape).astype(img_mpo.dtype)
-    max_contour = get_max_contour(img_mpo)
-    # Obtener la nueva imagen binarizada y su inversa
-    cv.fillPoly(new_img_bin, max_contour, 255)
-    cv.fillPoly(new_inv_img_bin, max_contour, 0)
-    return new_img_bin, new_inv_img_bin
-
-# Obtener una nueva mamografía eliminando los objetos que no son parte de la región del busto
-def get_breast_region(img_scale, img_bin, img_mpo):
-    # Limpiar la imagen binarizada preprocesada
-    new_img_bin, new_inv_img_bin = clean_img_mpo(img_mpo)
-    # Obtener las intensidades del área que no pertenece a la región del busto
-    non_breast_values = img_scale * new_inv_img_bin
-    # Calcular el nivel de gris medio de estas áreas
-    mean_gray_level = np.mean(non_breast_values)
-    # Modificar las intensidades de estas regiones con este valor
-    img_mean_gray_level = mean_gray_level * get_non_breast_objs(img_bin)
-    new_img_scale = np.where(img_mean_gray_level == mean_gray_level, img_mean_gray_level, img_scale).astype(np.uint8)
-    return new_img_scale, new_img_bin
-```
-
-```{python}
-# Eliminar los objetos que no son parte de la región del busto en las imágenes escaladas
-clean_imgs = list()
-clean_imgs_bin = list()
-
-for img_scale, img_bin, img_mpo in zip(imgs_scale, imgs_bin, imgs_mpo):
-    clean_img, clean_img_bin = get_breast_region(img_scale, img_bin, img_mpo)
-    clean_imgs.append(clean_img)
-    clean_imgs_bin.append(clean_img_bin)
-```
-
-```{python}
-# Imagen de ejemplo (Imagen escalada limpia)
-plt.imshow(clean_imgs[13], cmap='gray')
+plt.imshow(imgs_mpo[10], cmap='gray')
 plt.show()
 ```
 
 ![RE](img/tarea_2_4_1.png)
 
+##### 2.4.2 Extracción de la región del busto
+
+Aún después de aplicar el procesamiento morfológico, y como se visualiza en la imagen de ejemplo, quedan todavía elementos que no corresponden al área del busto. Sin embargo, claramente se puede notar que su tamaño es menor en comparación a esta área.
+
+Por ello, para eliminar los elementos faltantes, los autores proponen usar las características del objeto busto en la imagen mamográfica para etiquetar los objetos, y después extraer el objeto de mayor tamaño de la imagen binarizada. Y aquellos objetos que no correspondan al área del busto se modifican para volverse parte del fondo en dicha imagen. Finalmente, estos objetos también se modifican en la imagen reducida $I$, estableciendo sus valores de intensidad igual al nivel de gris medio del área que no pertenece al área del busto en ella.
+
+Sin embargo, los autores no explican cómo llevaron a cabo este proceso. Por lo que nosotros implementamos un proceso que busca replicar los puntos que ellos mencionan.
+
+Este proceso se compone de los siguientes pasos, aplicados a cada mamografía:
+
+1. Obtener la región del fondo de la imagen binarizada procesada con la operación morfológica de apertura, que es equivalente a la región que no es del busto.
+2. Obtener las intensidades de esta región, y calcular su nivel de gris medio
+3. Modificar las intensidades de los objetos más pequeños detectados en la imagen binarizada original con el valor del nivel de gris medio en la imagen escalada.
+4. Obtener la región del busto, que resulta ser la región más grande dentro de la imagen binarizada procesada con la operación morfológica de apertura.
+5. Regresar la imagen escalada limpia y la imagen binarizada limpia.
+
 ```{python}
-# Imagen de ejemplo (Imagen binarizada limpia)
-plt.imshow(clean_imgs_bin[13], cmap='gray')
+# Extraer la región del busto
+def extract_breast_region(img_scale, img_bin, img_mpo):
+    # Obtener la región que no pertenece a la región del busto
+    bg_region = get_region(img_mpo, region='bg')
+    # Obtener las intensidades de la región que no pertenece a la región del busto
+    bg_values = np.ma.array(img_scale, mask=False)
+    bg_values.mask = np.where(bg_region == 1, False, True)
+    # Calcular el nivel de gris medio de estas áreas
+    mean_gray_level = np.mean(bg_values)
+    # Modificar las intensidades en los objetos más pequeños
+    smaller_objects = get_region(img_mpo, region='bg')
+    mod_img_scale = np.where(smaller_objects == 1, mean_gray_level, img_scale).astype(np.uint8)
+    # Obtener la región más grande, que corresponde a la región del busto
+    breast_region = get_region(img_mpo, region='max')
+    return mod_img_scale, breast_region
+```
+
+```{python}
+# Eliminar los objetos que no son parte de la región del busto en las imágenes escaladas
+imgs_clean = list()
+imgs_bin_clean = list()
+
+for img_scale, img_bin, img_mpo in zip(imgs_scale, imgs_bin, imgs_mpo):
+    img_clean, img_bin_clean = extract_breast_region(img_scale, img_bin, img_mpo)
+    imgs_clean.append(img_clean)
+    imgs_bin_clean.append(img_bin_clean)
+```
+
+```{python}
+# Imagen de ejemplo (Imagen escalada limpia)
+plt.imshow(imgs_clean[10], cmap='gray')
 plt.show()
 ```
 
-![RE](img/tarea_2_4_2.png)
+![RE](img/tarea_2_4_2_clean.png)
+
+```{python}
+# Imagen de ejemplo (Imagen binarizada limpia)
+plt.imshow(imgs_bin_clean[10], cmap='gray')
+plt.show()
+```
+
+![RE](img/tarea_2_4_2_bin.png)
 
 Finalmente, todas las imágenes limpias se almacenan en el directorio de la aplicación para que puedan usarse dentro de ella.
 
@@ -420,16 +437,96 @@ app_dir = '../app/img/'
 find_nums = re.compile('\d{3}')
 imgs_nums = list(map(lambda filename: int(find_nums.findall(filename)[0]), imgs_filenames))
 
-for img_scale, img_clean, img_bin, img_num in zip(imgs_scale, clean_imgs, clean_imgs_bin, imgs_nums):
+for img_scale, img_clean, img_bin_clean, img_num in zip(imgs_scale, imgs_clean, imgs_bin_clean, imgs_nums):
     cv.imwrite(app_dir + str(img_num) + '_scale.png', img_scale)
     cv.imwrite(app_dir + str(img_num) + '_clean.png', img_clean)
-    cv.imwrite(app_dir + str(img_num) + '_bin_clean.png', img_bin)
+    cv.imwrite(app_dir + str(img_num) + '_bin_clean.png', np.where(img_bin_clean == 1, 255, 0))
+```
+
+## Tarea 2
+
+### 3. Replica un proceso que elimine el músculo pectoral
+
+En este caso, usamos el flujo del segundo artículo para extraer la región pectoral del músculo.
+
+En este caso, nos basamos del artículo de *Kar* [[3]](#ref), donde se explica el algoritmo iterativo de la umbralización de Otsu. Sin embargo, este algoritmo está adecuado para poder aplicar el procesamiento morfológico de apertura después de calcular la umbralización, ya que así lo pide el artículo de *Kar et al.* [[2]](#ref).
+
+```{python}
+# Extraer la región del músculo pectoral
+def extract_pectoral_muscle_region(img):
+    # Se calcula el valor del umbral de Otsu sobre la imagen
+    thresh, img_bin = cv.threshold(img, 0, 255, cv.THRESH_BINARY+cv.THRESH_OTSU)
+    # Se aplica procesamiento morfológico de apertura para limpiar algunas regiones blancas
+    img_bin = cv.morphologyEx(img_bin, cv.MORPH_OPEN, kernel)
+    # Inicializar el umbral de la iteración anterior
+    last_thresh = 0
+    # Calcular el umbral de Otsu de forma iterativa
+    while last_thresh != thresh:
+        # Extraer los pixeles del fondo y del primer plano
+        fg = np.ma.array(img, mask=False)
+        bg = np.ma.array(img, mask=False)
+        fg.mask = np.where(img_bin == 255, False, True)
+        bg.mask = np.where(img_bin == 0, False, True)
+        # Calcular el promedio de estas 2 regiones
+        mean_fg = np.mean(fg)
+        mean_bg = np.mean(bg)
+        # Extraer los pixeles que se encuentren entre estos 2 promedios (región TBD)
+        img_tbd_region = np.where(np.logical_and(img > mean_fg, img > mean_bg), img, 0).astype(np.uint8)
+        # Obtener un nuevo umbral usando esta región
+        last_thresh = thresh
+        thresh, img_bin = cv.threshold(img_tbd_region, 0, 255, cv.THRESH_BINARY+cv.THRESH_OTSU)
+        img_bin = cv.morphologyEx(img_bin, cv.MORPH_OPEN, kernel)
+    # Extraer la región más grande usando análisis de componentes conectadas
+    muscle_region = get_region(img_bin, 'max')
+    # Modificar las intensidades de esta región a cero
+    mod_img = np.where(muscle_region == 1, 0, img)
+    return mod_img, muscle_region
+```
+
+Con esta función se logra obtener la región del músculo pectoral identificada y la imagen limpia.
+
+```{python}
+# Eliminar los objetos que no son parte de la región del busto en las imágenes escaladas
+imgs_clean_2 = list()
+imgs_bin_clean_2 = list()
+
+for img in imgs_clean:
+    img_clean, img_bin_clean = extract_pectoral_muscle_region(img)
+    imgs_clean_2.append(img_clean)
+    imgs_bin_clean_2.append(img_bin_clean)
+```
+
+```{python}
+# Imagen de ejemplo (Imagen escalada limpia)
+plt.imshow(imgs_clean_2[10], cmap='gray')
+plt.show()
+```
+
+![RE](img/tarea_3_0_clean.png)
+
+```{python}
+# Imagen de ejemplo (Imagen binarizada limpia)
+plt.imshow(imgs_bin_clean_2[10], cmap='gray')
+plt.show()
+```
+
+![RE](img/tarea_3_0_bin.png)
+
+Finalmente, las imágenes limpias se almacenan en el directorio de la aplicación para poder ser usadas dentro de ella.
+
+```{python}
+# Almacenar las mamografías limpias en la carpeta de la aplicación
+for img, img_bin_clean, img_num in zip(imgs_clean_2, imgs_bin_clean_2, imgs_nums):
+    cv.imwrite(app_dir + str(img_num) + '_clean_2.png', img)
+    cv.imwrite(app_dir + str(img_num) + '_bin_clean_2.png', np.where(img_bin_clean == 1, 255, 0))
 ```
 
 ## Referencias<a name="ref"></a>
 
-Liu, C.-C., Tsai, C.-Y., Tsui, T.-S., & Yu, S.-S. (2012). An improved GVF snake based breast region extrapolation scheme for digital mammograms. Expert Systems with Applications, 39(4), 4505-4510. https://doi.org/10.1016/j.eswa.2011.09.136
+1. Liu, C.-C., Tsai, C.-Y., Tsui, T.-S., & Yu, S.-S. (2012). An improved GVF snake based breast region extrapolation scheme for digital mammograms. Expert Systems with Applications, 39(4), 4505-4510. https://doi.org/10.1016/j.eswa.2011.09.136
 
-Liu, C.-C., Tsai, C.-Y., Liu, J., Yu, C.-Y., & Yu, S.-S. (2012). A pectoral muscle segmentation algorithm for digital mammograms using Otsu thresholding and multiple regression analysis. Computers & Mathematics with Applications, 64(5), 1100-1107. https://doi.org/10.1016/j.camwa.2012.03.028
+2. Liu, C.-C., Tsai, C.-Y., Liu, J., Yu, C.-Y., & Yu, S.-S. (2012). A pectoral muscle segmentation algorithm for digital mammograms using Otsu thresholding and multiple regression analysis. Computers & Mathematics with Applications, 64(5), 1100-1107. https://doi.org/10.1016/j.camwa.2012.03.028
 
-OpenCV. (2021, 9 marzo). OpenCV: Morphological Transformations. https://docs.opencv.org/master/d9/d61/tutorial_py_morphological_ops.html
+3. Kar, C. (2016). Comparative Analysis between Iterative Threshold Technique and Otsu’s Method. International Journal of Advanced Research in Computer and Communication Engineering, 5(2), 208-212. https://doi.org/10.17148/IJARCCE.2016.5244
+
+3. OpenCV. (2021, 9 marzo). OpenCV: Morphological Transformations. https://docs.opencv.org/master/d9/d61/tutorial_py_morphological_ops.html
