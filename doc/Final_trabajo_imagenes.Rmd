@@ -443,11 +443,312 @@ for img_scale, img_clean, img_bin_clean, img_num in zip(imgs_scale, imgs_clean, 
     cv.imwrite(app_dir + str(img_num) + '_bin_clean.png', np.where(img_bin_clean == 1, 255, 0))
 ```
 
-## Tarea 2
+## Tarea 2 Intento con GVF Snake
 
 ### 3. Replica un proceso que elimine el músculo pectoral
 
 En este caso, usamos el flujo del segundo artículo para extraer la región pectoral del músculo.
+
+Este fue nuestro primer intento para realizar la eliminación del musculo pectoral, sin embargo, no logramos obtener el resultado esperado debido a cierta ambigüedad que existe dentro del documento en el cual nos basamos. Se realizaron varios cambios y distintos intentos para remediar aquello que el texto no explica, sin embargo, nos fue imposible hacer que funcionara con este acercamiento al problema.
+
+#### 3.1 Obtener el contorno final de la región del busto usando *GVF Snake*
+
+##### 3.1.1 Extraer el contorno inicial de la región del busto
+
+El siguiente paso es extraer el contorno inicial de la región del busto usando la siguiente fórmula:
+
+$$\text{IB}_{\text{edge}} = \text{IB}_{\text{fin}} - \text{IB}_{\text{ero}}$$
+
+Donde $\text{IB}_{\text{fin}}$ es la imagen binarizada limpia obtenida en el paso anterior, e $\text{IB}_{\text{ero}}$ es la imagen resultante de aplicar la operación de erosión morfológica sobre  $\text{IB}_{\text{fin}}$.
+
+```{python}
+# Extrapolación inicial del borde de la región del busto
+def extract_initial_breast_border(img_bin_clean, erode_iterations=1):
+    return img_bin_clean - cv.erode(img_bin_clean, kernel, iterations=erode_iterations)
+
+# Obtener la extrapolación inicial del borde de la región del busto de las imágenes binarizadas limpias
+imgs_edges = list(map(lambda img_bin_clean: extract_initial_breast_border(img_bin_clean, erode_iterations=1), imgs_bin_clean))
+
+# Imagen de ejemplo
+plt.imshow(imgs_edges[10], cmap='gray')
+plt.show()
+```
+
+![RE](img/tarea_snake_3_1_1.png)
+
+#####  3.1.2 Cálculo del gradiente usando el filtro de Sobel
+
+Para poder aplicar el *GVF Snake*, primero es necesario obtener el gradiente de los pixeles de cada imagen limpia usando el filtro de Sobel.
+
+El filtro de Sobel sigue la fórmula:
+
+$$G(x, y) = |G_x(x, y)| + |G_y(x, y)|$$
+
+donde $G_x(x, y)$ y $G_y(x, y)$ indican los cambios en la componente horizontal y vertical del pixel en la posición $(x, y) $ de cada imagen.
+
+```{python}
+# Calcular el gradiente de los pixeles de una imagen usando el filtro de Sobel
+def Sobel_filter(img):
+    # Cálculo de los gradientes de cada componente
+    grad_x = cv.Sobel(img, cv.CV_64F, dx=1, dy=0)
+    grad_y = cv.Sobel(img, cv.CV_64F, dx=0, dy=1)
+    # Convertir los valores de las componentes a su valor absoluto
+    abs_grad_x = cv.convertScaleAbs(grad_x)
+    abs_grad_y = cv.convertScaleAbs(grad_y)
+    # Calcular el gradiente usando la fórmula del filtro de Sobel
+    grad = cv.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
+    return abs_grad_x, abs_grad_y, grad
+
+# Calcular el gradiente de cada imagen y sus componentes
+imgs_grad_x = list()
+imgs_grad_y = list()
+imgs_grad = list()
+
+for img_clean in imgs_clean:
+    grad_x, grad_y, grad = Sobel_filter(img_clean)
+    imgs_grad_x.append(grad_x)
+    imgs_grad_y.append(grad_y)
+    imgs_grad.append(grad)
+
+# Imagen de ejemplo
+plt.imshow(imgs_grad[10], cmap='gray')
+plt.show()
+```
+
+![RE](img/tarea_snake_3_1_2.png)
+
+```{python}
+plt.subplot(121)
+plt.imshow(imgs_grad_x[10], cmap='gray')
+plt.subplot(122)
+plt.imshow(imgs_grad_y[10], cmap='gray')
+plt.show()
+```
+
+![RE](img/tarea_snake_3_1_2_double.png)
+
+#####  3.1.2 Ajuste del gradiente
+
+Los autores proponen una operación de ajuste sobre el gradiente obtenido en el paso anterior, pues mencionan que aplicar *GVF Snake* directamente sobre el gradiente podría tener como resultado un borde de la región del busto malo. La fórmula que ellos proponen es la siguiente:
+
+$$G_\text{adjust}(x, y) = w_0 \cdot \frac{G(x, y) - G_\text{min}}{G_\text{max} - G_\text{min}} + w_1 \cdot \frac{T - I(x, y)}{255}$$
+
+Donde:
+* $w_0$ y $w_1$ son pesos asignados por el usuario, los cuales toman los valores $0 \leq w_0 \leq 1$ y $w_1 = 1 - w_0$ (los autores mencionan que $w_0  = 0.63$ y que este dato es experimental).
+* $G_\text{max}$ y $G_\text{min}$ son el valor máximo y mínimo de la magnitud del campo gradiente $G$, respectivamente.
+* $T$ es el umbral obtenido el paso 2.3.
+* $I(x, y)$ es la imagen limpia.
+
+Según los autores, esta operación debería tener como resultado una imagen donde cada pixel adquiere un valor entre 0 y 1, y que esto debería ayudar a que el borde del busto se acerque más al borde real, pues esta operación disminuye el gradiente relativo de la región clara y aumenta el gradiente relativo de la región oscura.
+
+Sin embargo, al replicar esta operación, nosotros obtuvimos valores negativos, los cuales no se ajustan a lo que mencionan los autores, y afectan fuertemente los resultados obtenido más adelante. Un ejemplo se muestra a continuación:
+
+```{python}
+# Ajuste del gradiente sobre una imagen de muestra
+test_img = imgs_clean[10].copy()
+w0 = 0.63
+w1 = 1 - w0
+grad_magn = np.sqrt(np.power(grad_x, 2) + np.power(grad_y, 2))
+
+grad_adjust = w0 * ((grad - np.min(grad_magn)) / (np.max(grad_magn) - np.min(grad_magn))) + w1 * ((T(test_img) - test_img) / 255)
+
+# Valor mínimo obtenido de esta operación
+plt.imshow(grad_adjust, cmap='gray')
+plt.show()
+grad_adjust[0]
+```
+
+![RE](img/tarea_snake_3_1_2_gradient.png)
+
+| array([ 0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  5.10282443,  5.10282443,
+|        0.04499362,  0.04499362,  0.04499362,  0.04499362,  0.04499362,
+|        0.12467501,  0.16446994,  0.04499362,  0.08481906,  0.12467501,
+|        0.20426486,  0.24418185,  0.20426486,  0.16446994,  0.04499362,
+|        0.04499362,  0.08481906,  0.08481906,  0.28397677,  0.48319552,
+|        0.36381076,  0.24418185,  0.24418185,  0.08481906,  0.24418185,
+|        0.56278537,  0.52323459,  0.40336154,  0.52323459,  0.60282443,
+|        0.32377169,  0.20426486,  0.4434006 ,  0.56278537,  0.32377169,
+|        0.16446994,  0.12467501,  0.24418185,  0.24418185,  0.12467501,
+|        0.40336154,  0.48319552,  0.04499362,  0.08481906,  0.56278537,
+|        0.88163302,  0.4434006 ,  0.20426486,  0.48319552,  0.36381076,
+|        0.24418185,  0.56278537,  0.52323459,  0.48319552,  0.56278537,
+|        0.9211838 ,  0.95541894,  0.4361457 ,  0.79139803,  1.02824217,
+|        1.10008883,  1.25201361,  1.08557902,  1.0797751 ,  1.02957918,
+|        0.98471276,  0.93886977,  0.93451683,  0.96730099,  0.96004609,
+|        0.83122302,  0.66623941,  0.68837843,  0.64302372,  0.43800105,
+|        0.31136139,  0.2274186 ,  0.13887873,  0.15981091,  0.25912609,
+|        0.09970226,  0.0968003 ,  0.14239915,  0.06135832,  0.01418643,
+|       -0.06975636, -0.02996144, -0.11976918, -0.1610456 , -0.04302026,
+|        0.87142231,  0.75373267, -0.21392986, -0.20957692, -0.21247888,
+|       -0.21973378, -0.21973378, -0.21973378, -0.21392986, -0.21683182,
+|       -0.22118476, -0.22118476, -0.21973378, -0.22118476, -0.2255377 ,
+|       -0.22408672, -0.22408672, -0.22118476, -0.22263574, -0.22843966,
+|       -0.22843966, -0.24875339, -0.26036123, -0.27196908, -0.27632202,
+|       -0.27922398, -0.28212594, -0.28792986, -0.28938084, -0.28792986,
+|       -0.29083182, -0.29663574, -0.2995377 , -0.30098868, -0.30098868,
+|       -0.2995377 , -0.30243966, -0.2995377 , -0.30389064, -0.30098868,
+|       -0.30243966, -0.30098868, -0.30098868, -0.30389064, -0.30534163,
+|       -0.30389064, -0.30679261, -0.30824359, -0.30824359, -0.30824359,
+|       -0.30824359, -0.30969457, -0.30824359, -0.30824359, -0.04126319,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
+|        0.00516818])
+
+Como los autores no mencionan nada sobre cómo manejar estos valores negativos, decidimos usar el gradiente obtenido del filtro de Sobel para aplicar el *GVF Snake*.
+
+#####  3.1.3 Aplicar *GVF Snake*
+
+Primero resulta conveniente explicar un poco el concepto de *serpiente* en este contexto.
+
+###### Serpientes clásicas en la segmentación de imágenes
+
+Llamadas también como *modelo activo del contorno*, permite obtener una curva deformable en el dominio espacial de la imagen minimizando una función de energía. La forma de la serpiente es modificada por las fuerzas internas que intentan mantener la suavidad de la forma de la serpiente, y también es modificada por las fuerzas externas que atraen a la serpiente hacia las característica destacadas de la imagen.
+
+Este modelo tiene 2 incovenientes:
+
+1. La serpiente inicial debe estar bastante cerca del límite verdadero.
+2. El contorno activo no puede deformarse fácilmente en puntos de contorno cóncavos.
+
+###### Serpiente *GVF*
+
+Es una mejora del modelo clásico de serpíente., con el objetivo de obtener un mejor rendimiento en la segmentación de imágenes.
+
+La idea detrás de este modelo es agrandar el rango de influencia de cada fuerza externa creando un campo del flujo del vector gradientepara sustituir el cambo de fuerzas externas de la serpiente clásica.
+
+Este modelo mejora el rango restringido de captura y la débil convergencia de la serpiente clásica. Pero aún depende de la distribución del gradiente de la imagen.
+
+La función de energía usada en el modelo del *GVF snake* es la siguiente:
+
+$$\varepsilon = \int \int \mu (u_x^2 + u_y^2 + v_x^2 + v_y^2) + |\nabla f|^2 |V -  \nabla f|^2 dx dy$$
+
+Donde:
+
+* $\mu$ es un parámetro de regularización.
+* $f(x, y)$ es un mapa de contornos.
+* V es el campo del flujo del vector gradiente (*GVF*) tal que $V(x, y) = (u(x, y), v(x, y))$, el cual minimiza la función de energía.
+
+El campo GVF se puede obtener resolviendo las siguientes ecuaciones de Euler-Lagrange:
+
+$$\mu \nabla^2 u - (u - f_x)(f_x^2 + f_y^2) = 0$$
+
+$$\mu \nabla^2 v -  (v - f_y)(f_x^2 + f_y^2) = 0$$
+
+donde $\nabla^2$ es el operador Laplaciano.
+
+Las ecuaciones anteriores se pueden resolver tratando $u$ y $v$ como funciones del tiempo:
+
+$$u_t(x, y, t) = \mu \nabla^2 u(x, y, t)  - (u(x, y, t) - f_x(x, y) )(f_x(x, y) ^2 + f_y(x, y) ^2)$$
+
+$$v_t(x, y, t) = \mu \nabla^2 v(x, y, t)  -  (v(x, y, t) - f_y(x, y) )(f_x(x, y) ^2 + f_y(x, y) ^2)$$
+
+###### Modelo propuesto de la serpiente GVF
+
+```{python}
+# Operación del GVF Snake para obtener la región del busto
+def gvf_snake(grad_x, grad_y, img_edge, )
+```
+
+```{python}
+fx = cv.Sobel(grad, cv.CV_64F, dx=1, dy=0)
+fy = cv.Sobel(grad, cv.CV_64F, dx=0, dy=1)
+
+u = fx.copy()
+v = fy.copy()
+
+lamb = 0.1
+```
+
+```{python}
+for i in range(5):
+    u = lamb * cv.Laplacian(u, cv.CV_64F) - (u - fx) * (fx*+2 + fy**2)
+
+for i in range(5):
+    v = lamb * cv.Laplacian(v, cv.CV_64F) - (v - fy) * (fx*+2 + fy**2)
+    
+plt.imshow(u, cmap='gray')
+plt.show()
+```
+
+![RE](img/pruebas_gvf_1.png)
+
+```{python}
+plt.imshow(v, cmap='gray')
+plt.show()
+```
+
+```{python}
+np.all(V == imgs_edges[10])
+```
+
+```{python}
+V = cv.addWeighted(u, 1, v, 1, 0)
+
+plt.imshow(V, cmap='gray')
+plt.show()
+```
+
+![RE](img/pruebas_gvf_2.png)
+
+```{python}
+plt.imshow(imgs_edges[10])
+```
+
+![RE](img/pruebas_gvf_3.png)
+
+```{python}
+X_s = imgs_edges[10].copy()
+alpha = 0.001
+beta = 0.001
+
+for i in range(5):
+    X_s_2 = cv.Laplacian(X_s, cv.CV_64F)
+    X_s_4 = cv.Laplacian(X_s_2, cv.CV_64F)
+    X_s = alpha * X_s_2 - beta * X_s_4 + V
+```
+
+```{python}
+plt.imshow(X_s, cmap='gray')
+plt.show()
+```
+
+![RE](img/pruebas_gvf_4.png)
+
+```{python}
+X = clean_imgs[10] + X_s
+
+plt.imshow(X, cmap='gray')
+plt.show()
+```
+
+En este punto decidimos desistir de utilizar este acercamiento para la resolución del problema, aunque de conseguirlo obtendríamos una precisión bastante alta.
+
+
+## Tarea 2 Intento con Otsu Threshold
+
+### 3. Replica un proceso que elimine el músculo pectoral
+
+En este caso, usamos el flujo del segundo artículo para extraer la región pectoral del músculo.
+
+Al notar que con GVF Snake no estábamos obteniendo los resultados que necesitábamos decidimos cambiar de estrategia y utilizar un documento que usara un método distinto para obtener el músculo.
 
 En este caso, nos basamos del artículo de *Kar* [[3]](#ref), donde se explica el algoritmo iterativo de la umbralización de Otsu. Sin embargo, este algoritmo está adecuado para poder aplicar el procesamiento morfológico de apertura después de calcular la umbralización, ya que así lo pide el artículo de *Kar et al.* [[2]](#ref).
 
