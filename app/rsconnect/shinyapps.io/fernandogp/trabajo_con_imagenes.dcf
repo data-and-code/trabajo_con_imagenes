@@ -5,8 +5,8 @@ account: fernandogp
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 3765798
-bundleId: 4351320
+bundleId: 4355168
 url: https://fernandogp.shinyapps.io/trabajo_con_imagenes/
-when: 1615875603.84158
+when: 1615930332.75353
 asMultiple: FALSE
 asStatic: FALSE

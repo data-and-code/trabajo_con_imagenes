@@ -102,7 +102,7 @@ function(input, output, session) {
     }
   })
 
-  # Filtrar la información de la imagen seleccionada por el usuario
+  # Filtrar la información de la imagen seleccionada por el usuario (Pestaña 2)
   selected_clean_img <- reactive({
     slice(info_per_image, input$clean_img_num)
   })
@@ -154,6 +154,68 @@ function(input, output, session) {
       # Opciones definidas para la presentación de la tabla
       datatable(
         selected_clean_img()$details[[1]],
+        options = list(dom = "t"),
+        rownames = FALSE,
+        container = abnorm_details_containers,
+        selection = "none"
+      )
+    } else {
+      NULL
+    }
+  })
+
+  # Filtrar la información de la imagen seleccionada por el usuario (Pestaña 3)
+  selected_clean_img_2 <- reactive({
+    slice(info_per_image, input$clean_img_num_2)
+  })
+
+  # Visualizar las imágenes limpias seleccionadas por el usuario
+  output$orig_img_2 <- renderImage({
+    list(
+      src = path("img/", paste0(input$clean_img_num_2, "_scale"), ext = "png"),
+      width = "50%",
+      alt = paste0("Imagen ", input$clean_img_num_2),
+      style = "display: block; margin-left: auto; margin-right: auto"
+    )
+  }, deleteFile = FALSE)
+
+  output$clean_img_2 <- renderImage({
+    list(
+      src = path("img/", paste0(input$clean_img_num_2, "_clean_2"), ext = "png"),
+      width = "50%",
+      alt = paste0("Imagen ", input$clean_img_num_2),
+      style = "display: block; margin-left: auto; margin-right: auto"
+    )
+  }, deleteFile = FALSE)
+
+  output$clean_img_bin_2 <- renderImage({
+    list(
+      src = path("img/", paste0(input$clean_img_num_2, "_bin_clean_2"), ext = "png"),
+      width = "25%",
+      alt = paste0("Imagen ", input$clean_img_num_2),
+      style = "display: block; margin-left: auto; margin-right: auto"
+    )
+  }, deleteFile = FALSE)
+
+  # Visualizar la información de la imagen seleccionada por el usuario
+  output$clean_img_title_2 <- renderText({
+    paste0(selected_clean_img_2()$ref, ".pgm")
+  })
+
+  output$clean_img_bg_tissue <- renderText({
+    selected_clean_img_2()$bg_tissue
+  })
+
+  output$clean_img_abnorm_2 <- renderText({
+    selected_clean_img_2()$abnorm
+  })
+
+  output$clean_img_abnorm_details_2 <- renderDataTable({
+    # Sólo se despliega la información de las anormalidades si la imagen contiene alguna
+    if (selected_clean_img_2()$abnorm != "Normal") {
+      # Opciones definidas para la presentación de la tabla
+      datatable(
+        selected_clean_img_2()$details[[1]],
         options = list(dom = "t"),
         rownames = FALSE,
         container = abnorm_details_containers,
