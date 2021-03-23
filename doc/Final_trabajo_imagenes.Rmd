@@ -5,7 +5,7 @@ date: "r Sys.Date()"
 output:
   html_document:
     df_print: paged
-  rmdformats::readthedown:
+    rmdformats::readthedown:
     highlight: tango
     cards: no
     includes:
@@ -821,6 +821,170 @@ for img, img_bin_clean, img_num in zip(imgs_clean_2, imgs_bin_clean_2, imgs_nums
     cv.imwrite(app_dir + str(img_num) + '_clean_2.png', img)
     cv.imwrite(app_dir + str(img_num) + '_bin_clean_2.png', np.where(img_bin_clean == 1, 255, 0))
 ```
+
+## Tarea 3 proceso que clasifique el tipo de tejido
+
+Primeramente leemos los datos de todas las mamografías y desplegamos la tabla.
+
+```{python}
+with open('../extdata/all-mias/info.csv') as file:
+    info = pd.read_csv(file)
+    
+info
+```
+![RE](img/tarea_3_2_0.png)
+
+Aquí podemos observar que cada fila es una observación y las columnas:
+* ref: El identificador de cada mamografía.
+* bg_tissue: Carácter  que nos indica el tejido de fondo.
+  * F  Grasoso
+  * G  Grasoso-Glandular
+  * D  Denso-Glandular
+* abnorm: Clase de anomalía presente.
+  * CALC Calcificación 
+  * CIRC Masas bien definidas / circunscritas
+  * SPIC Masas espiculadas
+  * MISC Otras masas mal definidas
+  * ARCH Distorsión arquitectónica 
+  * ASYM Asimetría 
+  * NORM normal
+* severity: Gravedad de la anormalidad.
+  * B  Benigno
+  * M  Maligno
+* x,y: coordenadas de la imagen del centro de la anomalía..
+* approx_radius: Radio aproximado (en píxeles) de un círculo que encierra la anomalía.
+
+Ahora, extraemos solamente las columnas identificadoras de cada mamografía junto a sus indicadores de tejido de fondo y evitamos los duplicados.
+
+```{python}
+bg_tissue = info[['ref', 'bg_tissue']].drop_duplicates(ignore_index=True)
+```
+
+Seguidamente guardamos en X, un remodelado de las imagenes limpias 2 (que son las imagenes donde limpiamos el musculo pectoral) en forma de matriz de: $322 \times (256 \cdot 256) \rightarrow 322 \times 65536$ donde cada fila es una imagen y cada columna es un pixel (esto lo podemos ver como si "aplanaramos" las imagenes en una sola fila).
+
+Aunado a X,tenemos Y, donde guardamos la clasificación de las imagenes y de donde solo rescataremos la letra que identifica el tipo de tejido de cada imagen.
+
+```{python}
+X = np.reshape(imgs_clean_2, (322, 256*256))
+y = bg_tissue['bg_tissue'].values.reshape(-1)
+```
+
+Ahora separaremos en dos grupos los conjuntos de datos de modo que tengamos un conjunto del 80% de los datos en forma de entrenamiento para los modelos que usaremos para el proposito del trabajo (clasificación de los tejidos) y un 20% de prueba para medir su eficacía en la predicción.
+
+```{python}
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=100, stratify=y)
+```
+
+Ya que tenemos separados los datos, crearemos un objeto PCA en el cual ajustaremos todos nuestros datos origiales (X) y mediremos su varianza explicada para buscar disminuir el numero de componentes de cada imagen (consiguiendo disminuir la complejidad de los datos, el costo computacional, tiempo y más recursos).
+
+```{python}
+pca = PCA(n_components=256, whiten=True).fit(X)
+```
+
+Graficamos la varianza explicada acumulada y buscamos el componente en el que la varianza total explicada sea mayor al 75%, en ese momento terminamos de buscar.
+
+```{python}
+expl_var = np.cumsum(pca.explained_variance_ratio_)
+
+for i, cum_ev in enumerate(expl_var):
+    if cum_ev >= 0.75:
+        print("Número de componentes a elegir: ", i)
+        print("Varianza total explicada: ", cum_ev)
+        svd_comp = [i, cum_ev]
+        break
+        
+plt.plot(expl_var)
+plt.plot(svd_comp[0], svd_comp[1], marker="o")
+plt.xlabel('Número de componentes')
+plt.ylabel('Varianza total explicada')
+plt.show()
+```
+
+![RE](img/tarea_3_2_1.png)
+
+Podemos observar en la gráfica que apartir del componente 12 preservamos el 75% de la información.
+
+Ahora con esto creamos nuevamente un objeto PCA estableciendolo en 12 componentes y ajustandolo a nuestros datos. Una vez nuestro modelo se entrenó con nuestros datos, transformamos los datos que habíamos separados anteriormente.
+
+```{python}
+pca = PCA(n_components=12, whiten=True).fit(X)
+X_train_pca = pca.transform(X_train)
+X_test_pca = pca.transform(X_test)
+```
+
+Ahora, buscaremos hacer una SVC la cual nos clasifique el tipo de tejido de la imagen.
+
+![RE](img/tarea_3_2_3.png)
+
+Pero ya que nuestros conjuntos de datos no son lineales.
+
+![RE](img/tarea_3_0_clean.png)
+
+Usaremos un kernel de funcion de base radial.
+
+![RE](img/tarea_3_2_4.png)
+
+```{python}
+param_grid = {'C': [1e3, 5e3, 1e4, 5e4, 1e5],
+              'gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1], }
+clf = GridSearchCV(
+    SVC(kernel='rbf', class_weight='balanced'), param_grid
+)
+clf = clf.fit(X_train_pca, y_train)
+
+y_pred = clf.predict(X_test_pca)
+```
+
+```{python}
+print(clf.best_estimator_)
+print(classification_report(y_test, y_pred))
+print(confusion_matrix(y_test, y_pred))
+```
+
+![RE](img/tarea_3_2_2.png)
+Vemos que los mejores valores de estimación son: C = $5e4$ y un gamma = $0.0001$.
+
+```{python}
+param_grid = {'n_estimators': [10, 20, 50, 100],}
+rf = GridSearchCV(
+    RandomForestClassifier(), param_grid
+)
+rf = rf.fit(X_train_pca, y_train)
+
+y_pred = rf.predict(X_test_pca)
+```
+
+Compararemos con un modelo de Bosque Aleatorio (Random Forest) probando diferentes numeros de estimadores. 
+
+```{python}
+print(rf.best_estimator_)
+print(classification_report(y_test, y_pred))
+print(confusion_matrix(y_test, y_pred))
+```
+
+y mostramos los resultados.
+
+Podemos observar que tuvo un mejor desempeño al poder identificar mejor la clase F y la clase G. además, mostró una mejoría en su precisión comparado con el modelo SVC.
+
+![RE](img/tarea_3_2_5.png)
+
+```{python}
+param_grid = {'n_estimators': [10, 20, 50, 100],}
+rf = GridSearchCV(
+    RandomForestClassifier(), param_grid
+)
+rf = rf.fit(X_train, y_train)
+
+y_pred = rf.predict(X_test)
+```
+
+```{python}
+print(rf.best_estimator_)
+print(classification_report(y_test, y_pred))
+print(confusion_matrix(y_test, y_pred))
+```
+
+![RE](img/tarea_3_2_6.png)
 
 ## Referencias<a name="ref"></a>
 
