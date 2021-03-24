@@ -1,19 +1,20 @@
 ---
 title: "Trabajo con imágenes"
-author: "Fernando Gomez Perera, Ricardo Vargas Kumul y Calvin Lopez Alvarez"
-date: "r Sys.Date()"
+author: "Fernando Gómez Perera, Ricardo Vargas Kumul y Calvin López Alvárez"
+date: "`r format(Sys.Date(), '%d de %B de %Y')`"
 output:
-  html_document:
-    df_print: paged
-    rmdformats::readthedown:
+  rmdformats::readthedown:
     highlight: tango
     cards: no
     includes:
       in_header: header.html
       after_body: footer.html
+  html_document:
+    df_print: paged
   pdf_document:
     highlight: kate
 ---
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, eval=FALSE)
 ```
@@ -23,8 +24,6 @@ knitr::opts_chunk$set(echo = TRUE, eval=FALSE)
 # Aplicación
 
 El objetivo es crear una aplicación donde se muestre como salida la información detallada de cada mamografía.
-
-
 
 ## Extracción y Limpieza de Imagenes
 
@@ -553,65 +552,10 @@ grad_magn = np.sqrt(np.power(grad_x, 2) + np.power(grad_y, 2))
 grad_adjust = w0 * ((grad - np.min(grad_magn)) / (np.max(grad_magn) - np.min(grad_magn))) + w1 * ((T(test_img) - test_img) / 255)
 
 # Valor mínimo obtenido de esta operación
-plt.imshow(grad_adjust, cmap='gray')
-plt.show()
-grad_adjust[0]
+grad_adjust.min()
 ```
 
-![RE](img/tarea_snake_3_1_2_gradient.png)
-
-| array([ 0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  5.10282443,  5.10282443,
-|        0.04499362,  0.04499362,  0.04499362,  0.04499362,  0.04499362,
-|        0.12467501,  0.16446994,  0.04499362,  0.08481906,  0.12467501,
-|        0.20426486,  0.24418185,  0.20426486,  0.16446994,  0.04499362,
-|        0.04499362,  0.08481906,  0.08481906,  0.28397677,  0.48319552,
-|        0.36381076,  0.24418185,  0.24418185,  0.08481906,  0.24418185,
-|        0.56278537,  0.52323459,  0.40336154,  0.52323459,  0.60282443,
-|        0.32377169,  0.20426486,  0.4434006 ,  0.56278537,  0.32377169,
-|        0.16446994,  0.12467501,  0.24418185,  0.24418185,  0.12467501,
-|        0.40336154,  0.48319552,  0.04499362,  0.08481906,  0.56278537,
-|        0.88163302,  0.4434006 ,  0.20426486,  0.48319552,  0.36381076,
-|        0.24418185,  0.56278537,  0.52323459,  0.48319552,  0.56278537,
-|        0.9211838 ,  0.95541894,  0.4361457 ,  0.79139803,  1.02824217,
-|        1.10008883,  1.25201361,  1.08557902,  1.0797751 ,  1.02957918,
-|        0.98471276,  0.93886977,  0.93451683,  0.96730099,  0.96004609,
-|        0.83122302,  0.66623941,  0.68837843,  0.64302372,  0.43800105,
-|        0.31136139,  0.2274186 ,  0.13887873,  0.15981091,  0.25912609,
-|        0.09970226,  0.0968003 ,  0.14239915,  0.06135832,  0.01418643,
-|       -0.06975636, -0.02996144, -0.11976918, -0.1610456 , -0.04302026,
-|        0.87142231,  0.75373267, -0.21392986, -0.20957692, -0.21247888,
-|       -0.21973378, -0.21973378, -0.21973378, -0.21392986, -0.21683182,
-|       -0.22118476, -0.22118476, -0.21973378, -0.22118476, -0.2255377 ,
-|       -0.22408672, -0.22408672, -0.22118476, -0.22263574, -0.22843966,
-|       -0.22843966, -0.24875339, -0.26036123, -0.27196908, -0.27632202,
-|       -0.27922398, -0.28212594, -0.28792986, -0.28938084, -0.28792986,
-|       -0.29083182, -0.29663574, -0.2995377 , -0.30098868, -0.30098868,
-|       -0.2995377 , -0.30243966, -0.2995377 , -0.30389064, -0.30098868,
-|       -0.30243966, -0.30098868, -0.30098868, -0.30389064, -0.30534163,
-|       -0.30389064, -0.30679261, -0.30824359, -0.30824359, -0.30824359,
-|       -0.30824359, -0.30969457, -0.30824359, -0.30824359, -0.04126319,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818,  0.00516818,  0.00516818,  0.00516818,  0.00516818,
-|        0.00516818])
+| -0.3154984877642463
 
 Como los autores no mencionan nada sobre cómo manejar estos valores negativos, decidimos usar el gradiente obtenido del filtro de Sobel para aplicar el *GVF Snake*.
 
@@ -822,7 +766,18 @@ for img, img_bin_clean, img_num in zip(imgs_clean_2, imgs_bin_clean_2, imgs_nums
     cv.imwrite(app_dir + str(img_num) + '_bin_clean_2.png', np.where(img_bin_clean == 1, 255, 0))
 ```
 
-## Tarea 3 proceso que clasifique el tipo de tejido
+## Tarea 3 Proceso que clasifique el tipo de tejido
+
+Para esta tarea, probaremos 2 modelos de clasificación que funcionan muy bien para datos cuya región de separación entre clases dista de ser lineal (las mamografías, y en general las imágenes, son un ejemplo de esto debido a las variaciones en las intensidades), y en cambio permiten regiones de separación más flexibles. Estos modelos se caracterizan por tener mayor precisión (*accuracy*) de predicción que modelos menos flexibles como la regresión logística, pero el costo a pagar está en la interpretabilidad del modelo (Ejemplo: Estimar la probabilidad de cada clase o la significancia de cada variable puede ser muy complicado).
+
+En este caso, no nos basamos de alguna investigación específicamente, sino que en cambio buscamos distintas investigaciones y analizamos los modelos que ellos usaron para tener una idea de cuáles modelos de clasificación han sido probados y sus resultados. Como en este punto nuestros resultados no son muy buenos, ya que hay cosas que mejorar en la extracción del músculo pectoral, en esta entrega no adjuntamos nada referente a alguna investigación en específico, sino que eso lo dejaremos para cuando mejoremos el paso anterior para tener un mejor parámetro de comparación con alguna otra investigación.
+
+Los modelos probados son los siguientes:
+
+* *Máquina de Soporte Vectorial* o *Support Vector Machine (SVM)*, que no es más que una extensión del *Clasificador de Soporte Vectorial* o *Support Vector Classifier (SVC)* usando una función a la que se le denomina *kernel* diferente a la ecuación del hiperplano para aumentar el espacio de características y obtener regiones de separación no-lineales. En este caso, se usa el kernel de *función de base radial* o *radial basis function (rbf)*, el cual es muy popular para este tipo de problemas.
+* *Bosques aleatorios* o *Random forests*, que es una extensión del modelo *bagging*, cuyo funcionamiento de basa en la creación de múltiples *árboles de clasificación* para obtener la clase resultante promediando los resultados de todos los árboles. A diferencia de *bagging*, los *bosques aleatorios* buscan reducir la correlación entre los árboles para reducir la varianza cuando se promedian los árboles.
+
+De igual forma, para mejorar el desempeño de los modelos, se lleva a cabo una reducción de dimensionalidad usando *Análisis de Componentes Principales* o *Principal Component Analysis (PCA)*, el cual permite reducir dimensiones por medio del cálculo de los vectores propios y valores propios (también llamados *eigenvectores* y *eigenvalores*) de la matriz de características.
 
 Primeramente leemos los datos de todas las mamografías y desplegamos la tabla.
 
@@ -835,6 +790,7 @@ info
 ![RE](img/tarea_3_2_0.png)
 
 Aquí podemos observar que cada fila es una observación y las columnas:
+
 * ref: El identificador de cada mamografía.
 * bg_tissue: Carácter  que nos indica el tejido de fondo.
   * F  Grasoso
@@ -860,28 +816,28 @@ Ahora, extraemos solamente las columnas identificadoras de cada mamografía junt
 bg_tissue = info[['ref', 'bg_tissue']].drop_duplicates(ignore_index=True)
 ```
 
-Seguidamente guardamos en X, un remodelado de las imagenes limpias 2 (que son las imagenes donde limpiamos el musculo pectoral) en forma de matriz de: $322 \times (256 \cdot 256) \rightarrow 322 \times 65536$ donde cada fila es una imagen y cada columna es un pixel (esto lo podemos ver como si "aplanaramos" las imagenes en una sola fila).
+Seguidamente guardamos en X, un remodelado de las imágenes limpias 2 (que son las imágenes donde limpiamos el musculo pectoral) en forma de matriz de: $322 \times (256 \cdot 256) \rightarrow 322 \times 65536$ donde cada fila es una imagen y cada columna es un pixel (esto lo podemos ver como si "aplanáramos" las imágenes en una sola fila).
 
-Aunado a X,tenemos Y, donde guardamos la clasificación de las imagenes y de donde solo rescataremos la letra que identifica el tipo de tejido de cada imagen.
+Aunado a X, tenemos Y, donde guardamos la clasificación de las imágenes y de donde sólo rescataremos la letra que identifica el tipo de tejido de cada imagen.
 
 ```{python}
 X = np.reshape(imgs_clean_2, (322, 256*256))
 y = bg_tissue['bg_tissue'].values.reshape(-1)
 ```
 
-Ahora separaremos en dos grupos los conjuntos de datos de modo que tengamos un conjunto del 80% de los datos en forma de entrenamiento para los modelos que usaremos para el proposito del trabajo (clasificación de los tejidos) y un 20% de prueba para medir su eficacía en la predicción.
+Ahora, el conjunto de datos original se divide en 2 conjuntos: Uno de entrenamiento, el cuál permitirá entrenar el clasificador, y uno de prueba, con el cuál se probará el desempeño de dicho modelo. En este caso, el conjunto de entrenamiento contendrá el 80% de los datos, y el de prueba tendrá el 20% restante.
 
 ```{python}
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=100, stratify=y)
 ```
 
-Ya que tenemos separados los datos, crearemos un objeto PCA en el cual ajustaremos todos nuestros datos origiales (X) y mediremos su varianza explicada para buscar disminuir el numero de componentes de cada imagen (consiguiendo disminuir la complejidad de los datos, el costo computacional, tiempo y más recursos).
+Ya que tenemos separados los datos, crearemos un objeto PCA en el cual ajustaremos todos nuestros datos originales (X) y mediremos la varianza explicada para buscar disminuir el numero de componentes de cada imagen (consiguiendo disminuir la complejidad de los datos, el costo computacional, tiempo y más recursos) manteniendo la mayor cantidad de información.
 
 ```{python}
 pca = PCA(n_components=256, whiten=True).fit(X)
 ```
 
-Graficamos la varianza explicada acumulada y buscamos el componente en el que la varianza total explicada sea mayor al 75%, en ese momento terminamos de buscar.
+Graficamos la varianza explicada acumulada y buscamos el número de componentes que permita tener una valor de varianza total explicada mayor al 75%.
 
 ```{python}
 expl_var = np.cumsum(pca.explained_variance_ratio_)
@@ -902,9 +858,9 @@ plt.show()
 
 ![RE](img/tarea_3_2_1.png)
 
-Podemos observar en la gráfica que apartir del componente 12 preservamos el 75% de la información.
+Podemos observar en la gráfica que con 12 componentes preservamos el 75% de la información. Con eso, se logra reducir el espacio de características radicalmente (originalmente, el espacio de características era de 65,536 variables, que es equivalente al total de pixeles de cada imagen).
 
-Ahora con esto creamos nuevamente un objeto PCA estableciendolo en 12 componentes y ajustandolo a nuestros datos. Una vez nuestro modelo se entrenó con nuestros datos, transformamos los datos que habíamos separados anteriormente.
+Ahora con este número de componentes se crea nuevamente un objeto PCA estableciéndolo en 12 componentes y ajustándolo alos datos originales. Una vez nuestro que el modelo aprendió de estos datos, se transforman los conjuntos de entrenamiento y prueba para reducir sus dimensiones.
 
 ```{python}
 pca = PCA(n_components=12, whiten=True).fit(X)
@@ -912,17 +868,21 @@ X_train_pca = pca.transform(X_train)
 X_test_pca = pca.transform(X_test)
 ```
 
-Ahora, buscaremos hacer una SVC la cual nos clasifique el tipo de tejido de la imagen.
+Ahora, se entrena un modelo *Máquina de Soporte Vectorial (SVM)* para llevar a cabo la clasificación. Recordando, los modelos *SVM* son una extensión del *Clasificador de Soporte Vectorial (SVC)*, el cual permite clasificar datos cuya región de separación no es lineal.
+
+El modelo *SVC* se comporta como se visualiza en la siguiente imagen:
 
 ![RE](img/tarea_3_2_3.png)
 
-Pero ya que nuestros conjuntos de datos no son lineales.
+En este caso, las clases se pueden separar de forma lineal. Por lo que solamente es necesario usar la función del hiperplano para poder generar la línea que mejor separe a ambas clases.
 
-![RE](img/tarea_3_0_clean.png)
+Sin embargo, como con las mamografías podemos tener claro que es poco probable que las regiones de separación de las clases sean lineales, se usa directamente el modelo *SVM* usando un kernel *función base radial (rbf)*, el cuál permite aumentar el espacio de dimensiones a un espacio de dimensiones infinito abstracto-
 
-Usaremos un kernel de funcion de base radial.
+Un ejemplo de dicho kernel se puede visualizar en la siguiente imagen:
 
 ![RE](img/tarea_3_2_4.png)
+
+De igual forma, se usa una búsqueda de malla con validación cruzada para probar distintos parámetros de $C$ (el ancho del margen) y $\gamma$ (parámetro del kernel *rbf*), y encontrar la mejor combinación de dichos parámetros.
 
 ```{python}
 param_grid = {'C': [1e3, 5e3, 1e4, 5e4, 1e5],
@@ -944,6 +904,10 @@ print(confusion_matrix(y_test, y_pred))
 ![RE](img/tarea_3_2_2.png)
 Vemos que los mejores valores de estimación son: C = $5e4$ y un gamma = $0.0001$.
 
+Sin embargo, el desempeño del modelo es en general malo, pues la precisión de la predicción en general es solamente del 55%, que es casi igual que llevar a cabo la predicción al azar.
+
+Usando ahora *bosques aleatorios*, nuevamente se lleva a cabo una búsqueda de malla con validación cruzada para encontrar el número adecuado de árboles a crear.
+
 ```{python}
 param_grid = {'n_estimators': [10, 20, 50, 100],}
 rf = GridSearchCV(
@@ -954,19 +918,17 @@ rf = rf.fit(X_train_pca, y_train)
 y_pred = rf.predict(X_test_pca)
 ```
 
-Compararemos con un modelo de Bosque Aleatorio (Random Forest) probando diferentes numeros de estimadores. 
-
 ```{python}
 print(rf.best_estimator_)
 print(classification_report(y_test, y_pred))
 print(confusion_matrix(y_test, y_pred))
 ```
 
-y mostramos los resultados.
-
-Podemos observar que tuvo un mejor desempeño al poder identificar mejor la clase F y la clase G. además, mostró una mejoría en su precisión comparado con el modelo SVC.
+Podemos observar que tuvo un mejor desempeño al poder identificar mejor la clase F y la clase G. además, mostró una mejoría en su precisión comparado con el modelo SVC. En este caso, el número de árboles adecuado resulta ser de 10,  que al ser la primera opción no se visualiza en el resultado.
 
 ![RE](img/tarea_3_2_5.png)
+
+Finalmente, se prueba nuevamente *bosques aleatorios* usando todas las dimensiones (los conjuntos de entrenamiento y prueba antes de aplicarles *PCA*).
 
 ```{python}
 param_grid = {'n_estimators': [10, 20, 50, 100],}
@@ -985,6 +947,13 @@ print(confusion_matrix(y_test, y_pred))
 ```
 
 ![RE](img/tarea_3_2_6.png)
+
+Se puede visualizar que en este caso el mejor número de árboles resulta ser de 50. Sin embargo, la precisión de la predicción es casi la misma que la obtenida usando solamente 12 dimensiones.
+
+En este estado, nuestras siguientes actividades son las siguientes:
+
+* Mejorar la limpieza del músculo pectoral para mejorar los resultados obtenidos de los modelos.
+* Con esta mejoraría, quizás sería posible comparar nuestros resultados con los de alguna otra investigación llevada a cabo anteriormente.
 
 ## Referencias<a name="ref"></a>
 
