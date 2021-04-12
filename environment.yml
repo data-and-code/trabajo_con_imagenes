@@ -225,6 +225,10 @@ dependencies:
   - zlib=1.2.11=h516909a_1010
   - zstd=1.4.9=ha95c52a_0
   - pip:
+    - colorama==0.4.4
+    - gitdb==4.0.7
+    - gitpython==3.1.14
     - jupyterlab-git==0.30.0b2
     - nbdime==3.0.0b1
+    - smmap==4.0.0
 prefix: /home/fernando/.miniconda3/envs/proyecto_hggvd
