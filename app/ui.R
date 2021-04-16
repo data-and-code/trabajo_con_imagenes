@@ -84,7 +84,7 @@ body <- dashboardBody(
     # Segunda pestaña: Limpieza del fondo de las imágenes
     tabItem(
       tabName = "clean_imgs",
-      h2("Resultado de la limpieza replicando el artículo"),
+      h2("Resultado de la limpieza del fondo"),
       fluidRow(
         box(
           div(
@@ -132,7 +132,7 @@ body <- dashboardBody(
     # Tercera pestaña: Limpieza del músculo pectoral
     tabItem(
       tabName = "clean_imgs_2",
-      h2("Resultado de la limpieza replicando el artículo"),
+      h2("Resultado de la limpieza del músculo pectoral"),
       fluidRow(
         box(
           div(
